@@ -1,0 +1,73 @@
+---
+title: "Human Activity Recognition - Barbell Lifts"
+author: "DM"
+date: "Tuesday, October 21, 2014"
+output: html_document
+---
+
+Use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. 
+They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+Predict which class they fall into. 
+
+```{r}
+library(caret)
+library(randomForest)
+# Read data
+training <- read.csv("data/pml-training.csv")
+testing <- read.csv("data/pml-testing.csv")
+```
+
+Clean up the data 
+
+```{r}
+# Remove summary records  
+training <- training[(training$new_window == "no"),]
+
+# Remove first 6 columns
+training <- training[,7:ncol(training)]
+
+# Remove columns with non zero variance
+nsv <- nearZeroVar(training, saveMetrics=FALSE)
+training <- training[,-(nsv)]
+
+```
+
+Split into training and validation datasets 
+
+```{r}
+# Split training set into 2 parts
+inTrain <- createDataPartition(y=training$classe, p=0.75, list=FALSE)
+validation <- training[-inTrain,]
+training <- training[inTrain,]
+```
+
+Fit a random forest model 
+
+```{r}
+set.seed(2454)
+rfmod <- randomForest(classe~., data=training) 
+```
+
+Predict on validation dataset and get Accuracy 
+
+```{r}
+predictions <- predict(rfmod, newdata=validation)
+confusionMatrix(predictions, validation$classe) 
+```
+
+Predict on the testing dataset
+
+```{r}
+# Testing data
+predictions <- predict(rfmod, newdata=testing)
+pml_write_files = function(x){
+    n = length(x)
+    for(i in 1:n){
+        filename = paste0("answers/problem_id_",i,".txt") 
+        write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+    }
+}
+#pml_write_files(as.character(predictions))
+predictions
+```
+
